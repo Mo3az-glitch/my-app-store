@@ -17,7 +17,13 @@ ctk.set_default_color_theme("blue")
 
 # 🛑 Place your Public Key here
 PUBLIC_KEY_DATA = """-----BEGIN PUBLIC KEY-----
-ضع نص مفتاحك العام هنا بالكامل
+MIIBITANBgkqhkiG9w0BAQEFAAOCAQ4AMIIBCQKCAQBS3iWmAqsYlQUDQSQd4esO
+pRTc96JTkYXk9qg44zHfYg33sbPZZ+9WZwDsHIWTOCPqE+TUTKoRb1f31zPG8yzu
+BviwfZkXlcD8GM31GsPINjSWC8QUm7a0wUQQVPyIzLK4ZoVJYkTB9++gQ6eBWTJf
+SAiiGjBQPKboWxnOvFDzPAddMCL5eR5DrlJ6POzwMy1wdeLdd0hKvT0LZNl1aLKo
+5VLX4GozpyTwnNclrabSAbWKFPKzsFdNIDqYh7qv2xMIC6BKmPn51wXqEd4epoHE
+7vBFv/mDJ3TGcgFqUiw+7hTf9SEIhzz2ZdaolxSnQAElI/R7vGCrHjSD2Ti6qheH
+AgMBAAE=
 -----END PUBLIC KEY-----"""
 
 CONFIG_FILE = "license_config.json"
