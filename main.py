@@ -27,7 +27,9 @@ AgMBAAE=
 -----END PUBLIC KEY-----"""
 
 CONFIG_FILE = "license_config.json"
-SERVER_APPS_JSON_URL = "https://githubusercontent.com"
+
+# 🟢 تم استبدال الرابط هنا برابط الـ ngrok الفعلي الخاص بجهازك
+SERVER_APPS_JSON_URL = "https://ngrok-free.dev"
 
 def get_hardware_id():
     try:
@@ -133,7 +135,7 @@ class AppStoreForComputer(ctk.CTk):
         if user_code:
             success, duration_days = self.verify_serial_and_get_days(user_code)
             if success:
-                # 🧠 هنا نحسب تاريخ الانتهاء من تاريخ اليوم الفعلي للتفعيل
+                # هنا نحسب تاريخ الانتهاء من تاريخ اليوم الفعلي للتفعيل
                 calculated_expiry = (datetime.now() + timedelta(days=duration_days)).strftime("%Y-%m-%d")
                 
                 with open(CONFIG_FILE, "w") as f:
