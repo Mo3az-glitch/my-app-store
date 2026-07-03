@@ -18,12 +18,22 @@ jobs:
         python -m pip install --upgrade pip
         pip install pyinstaller customtkinter cryptography
 
-    - name: Build EXE with PyInstaller
+    - name: Build Store EXE
       run: |
         pyinstaller --noconsole --onefile main.py
 
-    - name: Upload Artifact
+    - name: Build Keygen EXE
+      run: |
+        pyinstaller --noconsole --onefile keygen.py
+
+    - name: Upload Store Artifact
       uses: actions/upload-artifact@v4
       with:
         name: App-Store-EXE
         path: dist/main.exe
+
+    - name: Upload Keygen Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Key-Generator-EXE
+        path: dist/keygen.exe
