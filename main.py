@@ -1,12 +1,13 @@
 import customtkinter as ctk
 import json, base64, os, subprocess, sys, urllib.request, zipfile, threading
+from datetime import datetime, timedelta
 
 ctk.set_appearance_mode('Dark')
 ctk.set_default_color_theme('blue')
 
-# نظام تشفير وتبسيط فائق الاستقرار لتقصير السيريالات
-SECRET_SALT = 95821
+# نظام تشفير فائق الاستقرار لتقصير السيريالات
 CONFIG_FILE = 'license_config.json'
+# رابط السيرفر السحابي الخاص بحسابك على GitHub Pages لقراءة البرامج
 SERVER_APPS_JSON_URL = 'https://github.io'
 
 def decrypt_short_serial(serial_number):
@@ -65,10 +66,11 @@ class AppStoreForComputer(ctk.CTk):
 
     def fetch_apps_from_server(self):
         try:
-            req = urllib.request.Request(SERVER_APPS_JSON_URL, headers={'User-Agent': 'Mozilla/5.0', 'ngrok-skip-browser-warning': 'true'})
+            req = urllib.request.Request(SERVER_APPS_JSON_URL, headers={'User-Agent': 'Mozilla/5.0'})
             with urllib.request.urlopen(req, timeout=5) as res: self.apps = json.loads(res.read().decode())
             self.after(0, self.render_apps_list)
-        except: self.after(0, lambda: ctk.CTkLabel(self.scroll_frame, text='❌ Connection Error to Host Server', text_color='red', font=ctk.CTkFont(size=16)).pack(pady=50))
+        except:
+            self.after(0, lambda: ctk.CTkLabel(self.scroll_frame, text='❌ Connection Error to Host Server', text_color='red', font=ctk.CTkFont(size=16)).pack(pady=50))
 
     def render_apps_list(self):
         if not self.apps: return
