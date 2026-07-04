@@ -120,7 +120,7 @@ class AppStoreForComputer(ctk.CTk):
         btn.pack(anchor='w', padx=45, pady=50)
 
     def prompt_activation(self):
-        dialog = ctk.CTkInputDialog(text='Enter your Serial Key (XXXXX-XXXXX-XXXXX-XXXXX):', title='License Activation')
+        dialog = ctk.CTkInputDialog(text='Enter your Serial Key Example (JJIBE-UGKJQ-RTMNR-V):', title='License Activation')
         code = dialog.get_input()
         if code:
             success, duration_days = decode_secure_serial(code.strip())
