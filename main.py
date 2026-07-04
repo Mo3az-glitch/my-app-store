@@ -31,7 +31,7 @@ class AppStoreForComputer(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title('Microsoft Store Windows Premium')
-        self.geometry('1150(' if '1150' else '1150x720')
+        self.geometry('1150x720') # 🟢 تم إصلاح المقاسات هنا بدقة لتفتح الواجهة فوراً
         self.current_hwid = get_hardware_id()
         
         self.is_activated = False
@@ -47,7 +47,6 @@ class AppStoreForComputer(ctk.CTk):
         threading.Thread(target=self.fetch_apps_from_server, daemon=True).start()
 
     def update_subscription_state(self):
-        """تحديث واحتساب الأيام المستهلكة أو التحقق من حالة التجميد الإيقاف"""
         if os.path.exists(CONFIG_FILE):
             try:
                 with open(CONFIG_FILE, 'r') as f: saved = json.load(f)
@@ -59,7 +58,6 @@ class AppStoreForComputer(ctk.CTk):
                         self.is_activated = False
                         return
                         
-                    # احتساب الأيام المارة منذ آخر فتح للمتجر
                     last_check = datetime.strptime(saved.get('last_check_date'), "%Y-%m-%d").date()
                     days_passed = (datetime.now().date() - last_check).days
                     
@@ -67,7 +65,7 @@ class AppStoreForComputer(ctk.CTk):
                         self.days_left = max(0, self.days_left - days_passed)
                         saved['days_left'] = self.days_left
                         saved['last_check_date'] = datetime.now().strftime("%Y-%m-%d")
-                        with open(CONFIG_FILE, 'w') as fw: json.dump(saved, f_w if 'f_w' else fw)
+                        with open(CONFIG_FILE, 'w') as fw: json.dump(saved, fw)
                         
                     if self.days_left > 0:
                         self.is_activated = True
@@ -78,7 +76,6 @@ class AppStoreForComputer(ctk.CTk):
     def show_main_page(self):
         for w in self.main_container.winfo_children(): w.destroy()
         
-        # شريط علوي فخم ومطور يشبه مايكروسوفت ستور الأصلي
         top_bar = ctk.CTkFrame(self.main_container, height=80, fg_color='#141414', corner_radius=0)
         top_bar.pack(fill='x', side='top')
         
@@ -94,7 +91,6 @@ class AppStoreForComputer(ctk.CTk):
             
         ctk.CTkLabel(top_bar, text=status_txt, text_color=status_col, font=ctk.CTkFont(size=16, weight='bold')).pack(side='left', padx=30, pady=25)
         
-        # أزرار التحكم بالاشتراك
         btn_frame = ctk.CTkFrame(top_bar, fg_color='transparent')
         btn_frame.pack(side='right', padx=30, pady=20)
         
@@ -105,7 +101,6 @@ class AppStoreForComputer(ctk.CTk):
         else:
             ctk.CTkButton(btn_frame, text="Activate Store", fg_color="#0067b8", hover_color="#005da6", font=ctk.CTkFont(weight="bold"), command=self.prompt_activation).pack(side='left', padx=10)
             
-        # واجهة عرض رئيسية جذابة وبطاقات مصممة بعناية
         ctk.CTkLabel(self.main_container, text="Explore Premium Software", font=ctk.CTkFont(size=28, weight="bold"), text_color="white").pack(anchor="w", padx=40, pady=(30,10))
         
         self.scroll_frame = ctk.CTkScrollableFrame(self.main_container, fg_color="transparent")
@@ -126,7 +121,6 @@ class AppStoreForComputer(ctk.CTk):
         for w in self.scroll_frame.winfo_children(): w.destroy()
         
         for app in self.apps:
-            # كارد فخم بتصميم انسيابي مستوحى من نظام ويندوز 11
             card = ctk.CTkFrame(self.scroll_frame, fg_color="#18181c", height=95, corner_radius=16, border_width=1, border_color="#252528")
             card.pack(fill="x", pady=10, padx=15)
             card.pack_propagate(False)
@@ -165,7 +159,6 @@ class AppStoreForComputer(ctk.CTk):
             else: self.show_popup('Failed', 'Invalid Subscription License Key!')
 
     def pause_subscription(self):
-        """تجميد الوقت وحفظ الأيام الباقية"""
         if os.path.exists(CONFIG_FILE):
             with open(CONFIG_FILE, 'r') as f: saved = json.load(f)
             saved['is_paused'] = True
@@ -176,7 +169,6 @@ class AppStoreForComputer(ctk.CTk):
             self.show_popup('Subscription Paused', 'Your remaining days are now frozen safely!')
 
     def resume_subscription(self):
-        """فك التجميد وإعادة المزامنة من تاريخ اليوم الجديد"""
         dialog = ctk.CTkInputDialog(text='Re-enter your Serial Key to resume access:', title='Resume Subscription')
         code = dialog.get_input()
         if code:
@@ -184,3 +176,12 @@ class AppStoreForComputer(ctk.CTk):
                 with open(CONFIG_FILE, 'r') as f: saved = json.load(f)
                 if saved.get('serial') == code.strip():
                     saved['is_paused'] = False
+                    saved['last_check_date'] = datetime.now().strftime("%Y-%m-%d")
+                    with open(CONFIG_FILE, 'w') as fw: json.dump(saved, fw)
+                    self.update_subscription_state()
+                    self.show_main_page()
+                    self.show_popup('Resumed', f'Welcome Back! Subscription restored with {self.days_left} days left.')
+                    return
+            self.show_popup('Error', 'Serial key mismatch or not found!')
+
+    def download_app(self, app):
