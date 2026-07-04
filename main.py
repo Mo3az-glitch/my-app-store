@@ -7,36 +7,53 @@ import sys
 import urllib.request
 import zipfile
 import threading
+import hashlib
 from datetime import datetime, timedelta
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
 
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
 
-# 🛑 Place your Public Key here
-PUBLIC_KEY_DATA = """-----BEGIN PUBLIC KEY-----
-MIIBITANBgkqhkiG9w0BAQEFAAOCAQ4AMIIBCQKCAQBS3iWmAqsYlQUDQSQd4esO
-pRTc96JTkYXk9qg44zHfYg33sbPZZ+9WZwDsHIWTOCPqE+TUTKoRb1f31zPG8yzu
-BviwfZkXlcD8GM31GsPINjSWC8QUm7a0wUQQVPyIzLK4ZoVJYkTB9++gQ6eBWTJf
-SAiiGjBQPKboWxnOvFDzPAddMCL5eR5DrlJ6POzwMy1wdeLdd0hKvT0LZNl1aLKo
-5VLX4GozpyTwnNclrabSAbWKFPKzsFdNIDqYh7qv2xMIC6BKmPn51wXqEd4epoHE
-7vBFv/mDJ3TGcgFqUiw+7hTf9SEIhzz2ZdaolxSnQAElI/R7vGCrHjSD2Ti6qheH
-AgMBAAE=
------END PUBLIC KEY-----"""
+# 🛑 This must perfectly match the SECRET_PASSWORD in your keygen.py
+SECRET_PASSWORD = "MySuperSecretKeyStore2026"
 
 CONFIG_FILE = "license_config.json"
 
-# 🟢 تم استبدال الرابط هنا برابط الـ ngrok الفعلي الخاص بجهازك
+# 🛑 This is your official active ngrok live server link
 SERVER_APPS_JSON_URL = "https://ngrok-free.dev"
+
+def derive_key(password):
+    return hashlib.sha256(password.encode()).digest()[:16]
+
+def decrypt_short_serial(serial_number):
+    try:
+        key = derive_key(SECRET_PASSWORD)
+        clean_serial = serial_number.replace("-", "")
+        
+        rem = len(clean_serial) % 8
+        if rem > 0:
+            clean_serial += "=" * (8 - rem)
+            
+        ciphertext = base64.b32decode(clean_serial.encode())
+        
+        iv = b'0123456789abcdef'
+        cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+        decryptor = cipher.decryptor()
+        decrypted_bytes = decryptor.update(ciphertext) + decryptor.finalize()
+        
+        decrypted_text = decrypted_bytes.decode().strip()
+        duration_days = int(decrypted_text.split(":")[-1])
+        return True, duration_days
+    except:
+        return False, 0
 
 def get_hardware_id():
     try:
         if sys.platform == "win32":
             cmd = "wmic csproduct get uuid"
             uuid_out = subprocess.check_output(cmd, shell=True).decode().split()
-            return uuid_out.strip()
+            return uuid_out[-1].strip()
         else:
             import uuid
             return str(uuid.getnode())
@@ -61,27 +78,11 @@ class AppStoreForComputer(ctk.CTk):
                 with open(CONFIG_FILE, "r") as f:
                     saved_data = json.load(f)
                 if saved_data.get("hwid") == self.current_hwid:
-                    # فحص هل التاريخ المحفوظ محلياً انتهى أم لا
                     expiry_date = datetime.strptime(saved_data.get("expiry_date"), "%Y-%m-%d").date()
                     if datetime.now().date() <= expiry_date:
                         self.is_activated = True
             except:
                 self.is_activated = False
-
-    def verify_serial_and_get_days(self, serial_number):
-        try:
-            raw_packet = base64.b64decode(serial_number.encode('utf-8')).decode('utf-8')
-            packet = json.loads(raw_packet)
-            data_bytes = packet["data"].encode('utf-8')
-            signature = base64.b64decode(packet["signature"].encode('utf-8'))
-            license_info = json.loads(packet["data"])
-            
-            public_key = serialization.load_pem_public_key(PUBLIC_KEY_DATA.encode('utf-8'))
-            public_key.verify(signature, data_bytes, padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH), hashes.SHA256())
-            
-            return True, license_info.get("duration_days", 0)
-        except:
-            return False, 0
 
     def create_base_widgets(self):
         self.top_bar = ctk.CTkFrame(self, height=60)
@@ -95,12 +96,19 @@ class AppStoreForComputer(ctk.CTk):
             self.activate_btn.pack(side="right", padx=20, pady=15)
         title_label = ctk.CTkLabel(self, text="App Store for computer", font=ctk.CTkFont(size=28, weight="bold"))
         title_label.pack(pady=10)
-        self.scrollable_frame = ctk.CTkScrollableFrame(self, width=800, height=400, label_text="Updating catalog...")
+        self.scrollable_frame = ctk.CTkScrollableFrame(self, width=800, height=400, label_text="Updating catalog from server...")
         self.scrollable_frame.pack(pady=10, fill="both", expand=True)
 
     def fetch_apps_from_server(self):
         try:
-            req = urllib.request.Request(SERVER_APPS_JSON_URL, headers={'User-Agent': 'Mozilla/5.0'})
+            # 🧠 Bypasses ngrok default browser warning splash screen automatically
+            req = urllib.request.Request(
+                SERVER_APPS_JSON_URL, 
+                headers={
+                    'User-Agent': 'Mozilla/5.0',
+                    'ngrok-skip-browser-warning': 'true'
+                }
+            )
             with urllib.request.urlopen(req) as response:
                 self.apps = json.loads(response.read().decode())
             self.after(0, self.render_apps)
@@ -133,20 +141,17 @@ class AppStoreForComputer(ctk.CTk):
         dialog = ctk.CTkInputDialog(text="Enter serial key to start your subscription:", title="Activate Store")
         user_code = dialog.get_input()
         if user_code:
-            success, duration_days = self.verify_serial_and_get_days(user_code)
+            success, duration_days = decrypt_short_serial(user_code)
             if success:
-                # هنا نحسب تاريخ الانتهاء من تاريخ اليوم الفعلي للتفعيل
                 calculated_expiry = (datetime.now() + timedelta(days=duration_days)).strftime("%Y-%m-%d")
-                
                 with open(CONFIG_FILE, "w") as f:
                     json.dump({"serial": user_code, "hwid": self.current_hwid, "expiry_date": calculated_expiry}, f)
-                
                 self.is_activated = True
                 self.render_apps()
                 self.status_lbl.configure(text="✔ Store Fully Activated", text_color="#2ec4b6")
                 if hasattr(self, 'activate_btn'):
                     self.activate_btn.destroy()
-                self.show_popup("Success", f"Activated! Your subscription is valid until {calculated_expiry}")
+                self.show_popup("Success", f"Activated! Subscription valid until {calculated_expiry}")
             else:
                 self.show_popup("Failed", "Invalid serial key!")
 
@@ -158,15 +163,18 @@ class AppStoreForComputer(ctk.CTk):
         self.show_popup("Download Started", f"Downloading {app_info['name']}...")
         try:
             download_path = os.path.join(os.environ['USERPROFILE'], 'Downloads', app_info['filename'])
-            extract_path = os.path.join(os.environ['USERPROFILE'], 'Downloads', app_info['name'])
             urllib.request.urlretrieve(app_info['url'], download_path)
+            
+            # Supports silent download and handles zip extraction seamlessly [15]
             if app_info['filename'].endswith('.zip'):
+                extract_path = os.path.join(os.environ['USERPROFILE'], 'Downloads', app_info['name'])
                 with zipfile.ZipFile(download_path, 'r') as zip_ref:
                     zip_ref.extractall(extract_path)
                 os.remove(download_path)
-            self.show_popup("Complete", f"Successfully installed {app_info['name']}!")
-        except:
-            self.show_popup("Error", "Download failed.")
+                
+            self.show_popup("Complete", f"Successfully downloaded {app_info['name']} to your Downloads folder!")
+        except Exception as e:
+            self.show_popup("Error", f"Download failed: {str(e)}")
 
     def show_popup(self, title, message):
         popup = ctk.CTkToplevel(self)
