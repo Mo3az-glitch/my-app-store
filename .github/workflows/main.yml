@@ -1,5 +1,10 @@
-name: Build EXE
+name: Build Store and Deploy Server
 on: [push, workflow_dispatch]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
   build:
@@ -37,3 +42,21 @@ jobs:
       with:
         name: Key-Generator-EXE
         path: dist/keygen.exe
+
+  deploy-server:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+
+    - name: Upload Pages Artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: '.'
+
+    - name: Deploy to GitHub Pages
+      uses: actions/deploy-pages@v4
